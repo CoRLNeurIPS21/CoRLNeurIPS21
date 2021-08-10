@@ -1,0 +1,65 @@
+import pickle
+import scipy
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+
+sns.set()
+sns.set_style("white")
+
+num_trials = 5
+
+methods = ['_rewards_residual.pkl', '_rewards_twopt.pkl', '_rewards_onept.pkl']
+
+meanl, maxl, minl = [], [], []
+for method in methods:
+    # load data
+    ds_directory = './learning_curves/'
+    exp_name = 'zomaddpg_'
+    env = 'simple_'
+
+    ls = []
+    for ind_trial in range(num_trials):
+        filename = ds_directory + exp_name + env + str(ind_trial) + method
+        with open(filename, 'rb') as f:
+            # The protocol version used is detected automatically, so we do not
+            # have to specify it.
+            ls.append(pickle.load(f))
+
+    y = np.array(ls)
+
+    mean, maxd, mind = np.mean(y, axis=0), np.max(y, axis=0), np.min(y, axis=0)
+
+    meanl.append(mean)
+    maxl.append(maxd)
+    minl.append(mind)
+
+# print('/n data type is {}'.format(type(mean)))
+# print('/n data is {}'.format(mean))
+
+x = np.arange(0, len(mean))
+
+fs = 14
+fig, ax = plt.subplots(1, 1, sharex=True)
+st = sns.axes_style("whitegrid")
+# ax.set_yscale('log')
+plt.ylim([-290, -195])
+plt.xlim([0, 100])
+plt.xticks(np.arange(0, stop=101, step=20), np.arange(
+    0, stop=100001, step=20000), fontsize=fs)
+plt.yticks(fontsize=fs)
+
+for mean, maxd, mind in zip(meanl, maxl, minl):
+    # ax.plot(x, mean, lw=3)
+    # ax.fill_between(x, mind, maxd, alpha=0.2, interpolate=True)
+    ax.plot(x[-(len(x)-1):], mean[-(len(x)-1):], lw=3)
+    ax.fill_between(x[-(len(x)-1):], mind[-(len(x)-1):],
+                    maxd[-(len(x)-1):], alpha=0.2, interpolate=True)
+
+plt.legend(['One-point Residual Feedback', 'Two-point Feedback (2)', 'One-point Feedback (1)'],
+           fontsize=fs, loc='lower right')
+plt.xlabel('$Query\ Complexity$', fontsize=16)
+plt.ylabel(r'$J(\theta_t)$', fontsize=16)
+
+plt.tight_layout()
+plt.savefig(ds_directory+'curve.pdf')
